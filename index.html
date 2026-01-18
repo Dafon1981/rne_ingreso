@@ -3,118 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat con la Base de Datos de Recepción</title>
+    <title>Registro de Doctores</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .chat-container { width: 90%; max-width: 600px; height: 80vh; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1 ); display: flex; flex-direction: column; }
-        #chat-window { flex-grow: 1; overflow-y: auto; padding: 20px; }
-        .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 18px; max-width: 80%; line-height: 1.4; }
-        .user-message { background-color: #007bff; color: white; align-self: flex-end; margin-left: auto; }
-        .ia-message { background-color: #e9e9eb; color: #333; align-self: flex-start; }
-        .error-message { background-color: #ffebee; color: #c62828; border: 1px solid #c62828; }
-        #input-area { display: flex; padding: 15px; border-top: 1px solid #ddd; }
-        #user-input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; font-size: 16px; }
-        #send-button { background: #007bff; color: white; border: none; border-radius: 50%; width: 45px; height: 45px; margin-left: 10px; font-size: 20px; cursor: pointer; }
-        pre { background-color: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1 );
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        .input-group input[type="text"],
+        .input-group input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .file-upload-area {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .file-input-wrapper {
+            flex: 1;
+            text-align: center;
+        }
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+        .file-label {
+            display: inline-block;
+            padding: 12px 0;
+            width: 100%;
+            background-color: #e9ecef;
+            color: #495057;
+            border: 1px dashed #adb5bd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .file-label:hover {
+            background-color: #dde2e6;
+        }
+        .preview-img {
+            width: 100%;
+            height: 100px;
+            object-fit: contain;
+            margin-top: 10px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            display: none; /* Oculta hasta que se selecciona una imagen */
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .submit-btn:disabled {
+            background-color: #a0c7ff;
+            cursor: not-allowed;
+        }
+        #status-message {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: 600;
+            height: 20px;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
     </style>
 </head>
 <body>
 
-<div class="chat-container">
-    <div id="chat-window">
-        <div class="message ia-message">Hola, soy tu asistente de base de datos. ¿Qué información necesitas de la tabla de registros?</div>
+    <div class="container">
+        <h1>Registrar Nuevo Doctor</h1>
+        <form id="doctor-form">
+            <div class="input-group">
+                <label for="nombre">Nombre Completo</label>
+                <input type="text" id="nombre" required>
+            </div>
+            <div class="input-group">
+                <label for="rne">RNE</label>
+                <input type="number" id="rne" required>
+            </div>
+            <div class="input-group">
+                <label for="especialidad">Especialidad</label>
+                <input type="text" id="especialidad" required>
+            </div>
+
+            <div class="file-upload-area">
+                <div class="file-input-wrapper">
+                    <label for="foto" class="file-label">Subir Foto</label>
+                    <input type="file" id="foto" accept="image/*">
+                    <img id="foto-preview" class="preview-img" alt="Previsualización de foto">
+                </div>
+                <div class="file-input-wrapper">
+                    <label for="firma" class="file-label">Subir Firma</label>
+                    <input type="file" id="firma" accept="image/*">
+                    <img id="firma-preview" class="preview-img" alt="Previsualización de firma">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submit-button">Guardar Doctor</button>
+            <p id="status-message"></p>
+        </form>
     </div>
-    <div id="input-area">
-        <input type="text" id="user-input" placeholder="Ej: busca al paciente Juan Perez...">
-        <button id="send-button">→</button>
-    </div>
-</div>
 
-<script>
-    // Tus claves de Supabase (¡estas son públicas y seguras de poner aquí!)
-    const supabaseUrl = 'https://esiklpxyectbekxvajnw.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzaWtscHh5ZWN0YmVreHZham53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2OTI1MjEsImV4cCI6MjA3NzI2ODUyMX0.mtQnqUrTmhmN1DQxOAUnGpizhYZobStHDH0cz_XfKGU';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey );
+    <script>
+        // --- Configuración de Supabase ---
+        const supabaseUrl = 'https://esiklpxyectbekxvajnw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzaWtscHh5ZWN0YmVreHZham53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2OTI1MjEsImV4cCI6MjA3NzI2ODUyMX0.mtQnqUrTmhmN1DQxOAUnGpizhYZobStHDH0cz_XfKGU';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey );
 
-    const chatWindow = document.getElementById('chat-window');
-    const userInput = document.getElementById('user-input');
-    const sendButton = document.getElementById('send-button');
+        // --- Elementos del DOM ---
+        const form = document.getElementById('doctor-form');
+        const nombreInput = document.getElementById('nombre');
+        const rneInput = document.getElementById('rne');
+        const especialidadInput = document.getElementById('especialidad');
+        const fotoInput = document.getElementById('foto');
+        const firmaInput = document.getElementById('firma');
+        const fotoPreview = document.getElementById('foto-preview');
+        const firmaPreview = document.getElementById('firma-preview');
+        const statusMessage = document.getElementById('status-message');
+        const submitButton = document.getElementById('submit-button');
 
-    sendButton.addEventListener('click', handleUserMessage);
-    userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            handleUserMessage();
-        }
-    });
+        // --- Lógica de Previsualización de Imágenes ---
+        fotoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fotoPreview.src = URL.createObjectURL(file);
+                fotoPreview.style.display = 'block';
+            }
+        });
 
-    function addMessage(text, type, isRawJson = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message', type);
-        if (isRawJson) {
-            messageDiv.innerHTML = `<pre>${text}</pre>`;
-        } else {
-            messageDiv.textContent = text;
-        }
-        chatWindow.appendChild(messageDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
+        firmaInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                firmaPreview.src = URL.createObjectURL(file);
+                firmaPreview.style.display = 'block';
+            }
+        });
 
-    async function handleUserMessage() {
-        const pregunta = userInput.value.trim();
-        if (!pregunta) return;
+        // --- Lógica del Formulario ---
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitButton.disabled = true;
+            statusMessage.className = '';
+            statusMessage.textContent = 'Procesando...';
 
-        addMessage(pregunta, 'user-message');
-        userInput.value = '';
-        addMessage('Pensando...', 'ia-message', false);
+            const nombre = nombreInput.value.trim();
+            const rne = rneInput.value;
+            const especialidad = especialidadInput.value.trim();
+            const fotoFile = fotoInput.files[0];
+            const firmaFile = firmaInput.files[0];
 
-        try {
-            // 1. Llamar a la Edge Function para que la IA convierta la pregunta en un plan JSON
-            const { data: plan, error: planError } = await supabase.functions.invoke('chat-con-ia', {
-                body: { pregunta },
-            });
+            if (!nombre || !rne || !especialidad) {
+                statusMessage.textContent = 'Por favor, completa todos los campos de texto.';
+                statusMessage.className = 'error';
+                submitButton.disabled = false;
+                return;
+            }
 
-            if (planError) throw planError;
-            if (plan.error) throw new Error(plan.error);
-            
-            // Mostramos el plan que generó la IA (muy útil para depurar)
-            document.querySelector('.ia-message:last-child').remove(); // Quita el "Pensando..."
-            addMessage('Plan de la IA:\n' + JSON.stringify(plan, null, 2), 'ia-message', true);
+            try {
+                let fotoUrl = null;
+                let firmaUrl = null;
 
-            // 2. Construir y ejecutar la consulta de Supabase basada en el plan de la IA
-            let query = supabase.from(plan.tabla).select(plan.columnas);
+                // 1. Subir la foto si existe
+                if (fotoFile) {
+                    statusMessage.textContent = 'Subiendo foto...';
+                    const fotoPath = `foto_doctores/${Date.now()}_${fotoFile.name}`;
+                    const { error: fotoError } = await supabase.storage.from('fondos').upload(fotoPath, fotoFile);
+                    if (fotoError) throw new Error(`Error al subir foto: ${fotoError.message}`);
+                    
+                    const { data: publicFotoUrl } = supabase.storage.from('fondos').getPublicUrl(fotoPath);
+                    fotoUrl = publicFotoUrl.publicUrl;
+                }
 
-            if (plan.filtros && plan.filtros.length > 0) {
-                plan.filtros.forEach(filtro => {
-                    query = query[filtro.operador](filtro.columna, filtro.valor);
+                // 2. Subir la firma si existe
+                if (firmaFile) {
+                    statusMessage.textContent = 'Subiendo firma...';
+                    const firmaPath = `firma_doctores/${Date.now()}_${firmaFile.name}`;
+                    const { error: firmaError } = await supabase.storage.from('fondos').upload(firmaPath, firmaFile);
+                    if (firmaError) throw new Error(`Error al subir firma: ${firmaError.message}`);
+
+                    const { data: publicFirmaUrl } = supabase.storage.from('fondos').getPublicUrl(firmaPath);
+                    firmaUrl = publicFirmaUrl.publicUrl;
+                }
+
+                // 3. Guardar todos los datos en la tabla 'doctores'
+                statusMessage.textContent = 'Guardando datos del doctor...';
+                const { error: insertError } = await supabase.from('doctores').insert({
+                    nombre: nombre,
+                    rne: rne,
+                    especialidad: especialidad,
+                    foto: fotoUrl,
+                    firma: firmaUrl
                 });
+
+                if (insertError) throw new Error(`Error al guardar en base de datos: ${insertError.message}`);
+
+                // 4. Éxito
+                statusMessage.textContent = '¡Doctor registrado con éxito!';
+                statusMessage.className = 'success';
+                form.reset();
+                fotoPreview.style.display = 'none';
+                firmaPreview.style.display = 'none';
+
+            } catch (error) {
+                console.error('Error en el proceso:', error);
+                statusMessage.textContent = error.message;
+                statusMessage.className = 'error';
+            } finally {
+                submitButton.disabled = false;
             }
-            
-            if (plan.accion === 'count') {
-                query = query.select('*', { count: 'exact', head: true });
-            }
-
-            const { data: resultados, error: dbError, count } = await query;
-
-            if (dbError) throw dbError;
-
-            // 3. Mostrar los resultados al usuario
-            if (plan.accion === 'count') {
-                addMessage(`Respuesta: Se encontraron ${count} registros.`, 'ia-message');
-            } else if (resultados.length === 0) {
-                addMessage('No encontré resultados para tu consulta.', 'ia-message');
-            } else {
-                const respuestaFormateada = 'Resultados:\n' + JSON.stringify(resultados, null, 2);
-                addMessage(respuestaFormateada, 'ia-message', true);
-            }
-
-        } catch (error) {
-            console.error('Error en el proceso:', error);
-            document.querySelector('.ia-message:last-child').remove(); // Quita el "Pensando..."
-            addMessage(`Error: ${error.message}`, 'error-message');
-        }
-    }
-</script>
+        });
+    </script>
 
 </body>
 </html>
