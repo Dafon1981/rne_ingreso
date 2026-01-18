@@ -6,107 +6,22 @@
     <title>Registro de Doctores</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8"></script>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            width: 90%;
-            max-width: 500px;
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1 );
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 25px;
-        }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 600;
-        }
-        .input-group input[type="text"],
-        .input-group input[type="number"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-        .file-upload-area {
-            display: flex;
-            justify-content: space-around;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .file-input-wrapper {
-            flex: 1;
-            text-align: center;
-        }
-        .file-input-wrapper input[type="file"] {
-            display: none;
-        }
-        .file-label {
-            display: inline-block;
-            padding: 12px 0;
-            width: 100%;
-            background-color: #e9ecef;
-            color: #495057;
-            border: 1px dashed #adb5bd;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.2s;
-        }
-        .file-label:hover {
-            background-color: #dde2e6;
-        }
-        .preview-img {
-            width: 100%;
-            height: 100px;
-            object-fit: contain;
-            margin-top: 10px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            display: none; /* Oculta hasta que se selecciona una imagen */
-        }
-        .submit-btn {
-            width: 100%;
-            padding: 15px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .submit-btn:disabled {
-            background-color: #a0c7ff;
-            cursor: not-allowed;
-        }
-        #status-message {
-            text-align: center;
-            margin-top: 20px;
-            font-weight: 600;
-            height: 20px;
-        }
+        /* --- Todos los estilos permanecen iguales --- */
+        body, html { margin: 0; padding: 0; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 90%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1 ); }
+        h1 { text-align: center; color: #333; margin-bottom: 25px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; color: #555; font-weight: 600; }
+        .input-group input[type="text"], .input-group input[type="number"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .file-upload-area { display: flex; justify-content: space-around; gap: 15px; margin-bottom: 20px; }
+        .file-input-wrapper { flex: 1; text-align: center; }
+        .file-input-wrapper input[type="file"] { display: none; }
+        .file-label { display: inline-block; padding: 12px 0; width: 100%; background-color: #e9ecef; color: #495057; border: 1px dashed #adb5bd; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background-color 0.2s; }
+        .file-label:hover { background-color: #dde2e6; }
+        .preview-img { width: 100%; height: 100px; object-fit: contain; margin-top: 10px; border: 1px solid #eee; border-radius: 8px; display: none; }
+        .submit-btn { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        .submit-btn:disabled { background-color: #a0c7ff; cursor: not-allowed; }
+        #status-message { text-align: center; margin-top: 20px; font-weight: 600; height: 20px; }
         .success { color: #28a745; }
         .error { color: #dc3545; }
     </style>
@@ -148,12 +63,12 @@
     </div>
 
     <script>
-        // --- Configuración de Supabase ---
+        // --- Configuración de Supabase (sin cambios) ---
         const supabaseUrl = 'https://esiklpxyectbekxvajnw.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzaWtscHh5ZWN0YmVreHZham53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2OTI1MjEsImV4cCI6MjA3NzI2ODUyMX0.mtQnqUrTmhmN1DQxOAUnGpizhYZobStHDH0cz_XfKGU';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey );
 
-        // --- Elementos del DOM ---
+        // --- Elementos del DOM (sin cambios) ---
         const form = document.getElementById('doctor-form');
         const nombreInput = document.getElementById('nombre');
         const rneInput = document.getElementById('rne');
@@ -165,24 +80,17 @@
         const statusMessage = document.getElementById('status-message');
         const submitButton = document.getElementById('submit-button');
 
-        // --- Lógica de Previsualización de Imágenes ---
+        // --- Lógica de Previsualización (sin cambios) ---
         fotoInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file) {
-                fotoPreview.src = URL.createObjectURL(file);
-                fotoPreview.style.display = 'block';
-            }
+            if (file) { fotoPreview.src = URL.createObjectURL(file); fotoPreview.style.display = 'block'; }
         });
-
         firmaInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file) {
-                firmaPreview.src = URL.createObjectURL(file);
-                firmaPreview.style.display = 'block';
-            }
+            if (file) { firmaPreview.src = URL.createObjectURL(file); firmaPreview.style.display = 'block'; }
         });
 
-        // --- Lógica del Formulario ---
+        // --- Lógica del Formulario (¡CON LA CORRECCIÓN!) ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             submitButton.disabled = true;
@@ -209,22 +117,28 @@
                 // 1. Subir la foto si existe
                 if (fotoFile) {
                     statusMessage.textContent = 'Subiendo foto...';
-                    const fotoPath = `foto_doctores/${Date.now()}_${fotoFile.name}`;
-                    const { error: fotoError } = await supabase.storage.from('fondos').upload(fotoPath, fotoFile);
+                    const fotoPath = `${Date.now()}_${fotoFile.name}`;
+                    // =================================================================
+                    // ¡CORRECCIÓN! Apuntamos al bucket 'foto_doctores'
+                    // =================================================================
+                    const { error: fotoError } = await supabase.storage.from('foto_doctores').upload(fotoPath, fotoFile);
                     if (fotoError) throw new Error(`Error al subir foto: ${fotoError.message}`);
                     
-                    const { data: publicFotoUrl } = supabase.storage.from('fondos').getPublicUrl(fotoPath);
+                    const { data: publicFotoUrl } = supabase.storage.from('foto_doctores').getPublicUrl(fotoPath);
                     fotoUrl = publicFotoUrl.publicUrl;
                 }
 
                 // 2. Subir la firma si existe
                 if (firmaFile) {
                     statusMessage.textContent = 'Subiendo firma...';
-                    const firmaPath = `firma_doctores/${Date.now()}_${firmaFile.name}`;
-                    const { error: firmaError } = await supabase.storage.from('fondos').upload(firmaPath, firmaFile);
+                    const firmaPath = `${Date.now()}_${firmaFile.name}`;
+                    // =================================================================
+                    // ¡CORRECCIÓN! Apuntamos al bucket 'firma_doctores'
+                    // =================================================================
+                    const { error: firmaError } = await supabase.storage.from('firma_doctores').upload(firmaPath, firmaFile);
                     if (firmaError) throw new Error(`Error al subir firma: ${firmaError.message}`);
 
-                    const { data: publicFirmaUrl } = supabase.storage.from('fondos').getPublicUrl(firmaPath);
+                    const { data: publicFirmaUrl } = supabase.storage.from('firma_doctores').getPublicUrl(firmaPath);
                     firmaUrl = publicFirmaUrl.publicUrl;
                 }
 
