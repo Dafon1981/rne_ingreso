@@ -31,6 +31,7 @@
     <div class="container">
         <h1>Registrar Nuevo Doctor</h1>
         <form id="doctor-form">
+            <!-- Los campos del formulario no cambian -->
             <div class="input-group">
                 <label for="nombre">Nombre Completo</label>
                 <input type="text" id="nombre" required>
@@ -43,7 +44,6 @@
                 <label for="especialidad">Especialidad</label>
                 <input type="text" id="especialidad" required>
             </div>
-
             <div class="file-upload-area">
                 <div class="file-input-wrapper">
                     <label for="foto" class="file-label">Subir Foto</label>
@@ -56,19 +56,16 @@
                     <img id="firma-preview" class="preview-img" alt="Previsualización de firma">
                 </div>
             </div>
-
             <button type="submit" class="submit-btn" id="submit-button">Guardar Doctor</button>
             <p id="status-message"></p>
         </form>
     </div>
 
     <script>
-        // --- Configuración de Supabase (sin cambios) ---
+        // --- Configuración y Elementos (sin cambios) ---
         const supabaseUrl = 'https://esiklpxyectbekxvajnw.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzaWtscHh5ZWN0YmVreHZham53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2OTI1MjEsImV4cCI6MjA3NzI2ODUyMX0.mtQnqUrTmhmN1DQxOAUnGpizhYZobStHDH0cz_XfKGU';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey );
-
-        // --- Elementos del DOM (sin cambios) ---
         const form = document.getElementById('doctor-form');
         const nombreInput = document.getElementById('nombre');
         const rneInput = document.getElementById('rne');
@@ -90,7 +87,7 @@
             if (file) { firmaPreview.src = URL.createObjectURL(file); firmaPreview.style.display = 'block'; }
         });
 
-        // --- Lógica del Formulario (¡CON LA CORRECCIÓN!) ---
+        // --- Lógica del Formulario (¡CON VERIFICACIÓN DE RNE!) ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             submitButton.disabled = true;
@@ -111,6 +108,24 @@
             }
 
             try {
+                // =================================================================
+                // ¡NUEVO PASO! Verificar si el RNE ya existe
+                // =================================================================
+                statusMessage.textContent = 'Verificando RNE...';
+                const { data: existingDoctor, error: selectError } = await supabase
+                    .from('doctores')
+                    .select('rne')
+                    .eq('rne', rne)
+                    .single();
+
+                if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = No se encontró la fila, lo cual es bueno
+                    throw new Error(`Error al verificar RNE: ${selectError.message}`);
+                }
+
+                if (existingDoctor) {
+                    throw new Error(`El RNE ${rne} ya está registrado. Por favor, use otro.`);
+                }
+
                 let fotoUrl = null;
                 let firmaUrl = null;
 
@@ -118,12 +133,8 @@
                 if (fotoFile) {
                     statusMessage.textContent = 'Subiendo foto...';
                     const fotoPath = `${Date.now()}_${fotoFile.name}`;
-                    // =================================================================
-                    // ¡CORRECCIÓN! Apuntamos al bucket 'foto_doctores'
-                    // =================================================================
                     const { error: fotoError } = await supabase.storage.from('foto_doctores').upload(fotoPath, fotoFile);
                     if (fotoError) throw new Error(`Error al subir foto: ${fotoError.message}`);
-                    
                     const { data: publicFotoUrl } = supabase.storage.from('foto_doctores').getPublicUrl(fotoPath);
                     fotoUrl = publicFotoUrl.publicUrl;
                 }
@@ -132,12 +143,8 @@
                 if (firmaFile) {
                     statusMessage.textContent = 'Subiendo firma...';
                     const firmaPath = `${Date.now()}_${firmaFile.name}`;
-                    // =================================================================
-                    // ¡CORRECCIÓN! Apuntamos al bucket 'firma_doctores'
-                    // =================================================================
                     const { error: firmaError } = await supabase.storage.from('firma_doctores').upload(firmaPath, firmaFile);
                     if (firmaError) throw new Error(`Error al subir firma: ${firmaError.message}`);
-
                     const { data: publicFirmaUrl } = supabase.storage.from('firma_doctores').getPublicUrl(firmaPath);
                     firmaUrl = publicFirmaUrl.publicUrl;
                 }
