@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- El <head> y los <style> no cambian, son los mismos de antes -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Doctores</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8"></script>
     <style>
-        /* --- Todos los estilos permanecen iguales --- */
+        /* ... tus estilos de antes ... */
         body, html { margin: 0; padding: 0; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .container { width: 90%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1 ); }
         h1 { text-align: center; color: #333; margin-bottom: 25px; }
@@ -27,11 +28,10 @@
     </style>
 </head>
 <body>
-
+    <!-- El <body> (formulario) no cambia, es el mismo de antes -->
     <div class="container">
         <h1>Registrar Nuevo Doctor</h1>
         <form id="doctor-form">
-            <!-- Los campos del formulario no cambian -->
             <div class="input-group">
                 <label for="nombre">Nombre Completo</label>
                 <input type="text" id="nombre" required>
@@ -87,7 +87,7 @@
             if (file) { firmaPreview.src = URL.createObjectURL(file); firmaPreview.style.display = 'block'; }
         });
 
-        // --- Lógica del Formulario (¡CON VERIFICACIÓN DE RNE!) ---
+        // --- Lógica del Formulario (¡SIMPLIFICADA!) ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             submitButton.disabled = true;
@@ -108,24 +108,6 @@
             }
 
             try {
-                // =================================================================
-                // ¡NUEVO PASO! Verificar si el RNE ya existe
-                // =================================================================
-                statusMessage.textContent = 'Verificando RNE...';
-                const { data: existingDoctor, error: selectError } = await supabase
-                    .from('doctores')
-                    .select('rne')
-                    .eq('rne', rne)
-                    .single();
-
-                if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = No se encontró la fila, lo cual es bueno
-                    throw new Error(`Error al verificar RNE: ${selectError.message}`);
-                }
-
-                if (existingDoctor) {
-                    throw new Error(`El RNE ${rne} ya está registrado. Por favor, use otro.`);
-                }
-
                 let fotoUrl = null;
                 let firmaUrl = null;
 
@@ -159,7 +141,13 @@
                     firma: firmaUrl
                 });
 
-                if (insertError) throw new Error(`Error al guardar en base de datos: ${insertError.message}`);
+                // Si hay un error, la base de datos nos dirá si el RNE está duplicado.
+                if (insertError) {
+                    if (insertError.message.includes('duplicate key value violates unique constraint "doctores_rne_key"')) {
+                        throw new Error(`El RNE ${rne} ya está registrado. Por favor, use otro.`);
+                    }
+                    throw new Error(`Error al guardar en base de datos: ${insertError.message}`);
+                }
 
                 // 4. Éxito
                 statusMessage.textContent = '¡Doctor registrado con éxito!';
