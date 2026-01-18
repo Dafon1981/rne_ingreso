@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <!-- El <head> y los <style> no cambian, son los mismos de antes -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Doctores</title>
+    <title>RNE Administrativo</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8"></script>
     <style>
-        /* ... tus estilos de antes ... */
+        /* Estilos base (sin cambios ) */
         body, html { margin: 0; padding: 0; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { width: 90%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1 ); }
+        .container { width: 90%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
         h1 { text-align: center; color: #333; margin-bottom: 25px; }
         .input-group { margin-bottom: 20px; }
         .input-group label { display: block; margin-bottom: 8px; color: #555; font-weight: 600; }
@@ -25,12 +24,31 @@
         #status-message { text-align: center; margin-top: 20px; font-weight: 600; height: 20px; }
         .success { color: #28a745; }
         .error { color: #dc3545; }
+
+        /* --- ¡NUEVOS ESTILOS PARA LA EDICIÓN! --- */
+        .action-buttons { display: flex; gap: 10px; }
+        .edit-btn { flex-grow: 1; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        #edit-section { display: none; margin-bottom: 20px; }
+        #doctor-select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
+        #cancel-edit-btn { display: none; margin-top: 10px; text-align: center; color: #007bff; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
-    <!-- El <body> (formulario) no cambia, es el mismo de antes -->
+
     <div class="container">
-        <h1>Registrar Nuevo Doctor</h1>
+        <h1>RNE Administrativo</h1>
+
+        <!-- ¡NUEVA SECCIÓN DE EDICIÓN! -->
+        <div id="edit-section">
+            <div class="input-group">
+                <label for="doctor-select">Selecciona un Doctor para Editar</label>
+                <select id="doctor-select">
+                    <option value="">-- Cargar Doctores --</option>
+                </select>
+            </div>
+            <a id="cancel-edit-btn">Cancelar Edición y Registrar Nuevo</a>
+        </div>
+
         <form id="doctor-form">
             <div class="input-group">
                 <label for="nombre">Nombre Completo</label>
@@ -56,16 +74,20 @@
                     <img id="firma-preview" class="preview-img" alt="Previsualización de firma">
                 </div>
             </div>
-            <button type="submit" class="submit-btn" id="submit-button">Guardar Doctor</button>
+            <div class="action-buttons">
+                <button type="submit" class="submit-btn" id="submit-button">Guardar Doctor</button>
+                <button type="button" class="edit-btn" id="edit-button">Editar Doctor</button>
+            </div>
             <p id="status-message"></p>
         </form>
     </div>
 
     <script>
-        // --- Configuración y Elementos (sin cambios) ---
+        // --- Configuración y Elementos ---
         const supabaseUrl = 'https://esiklpxyectbekxvajnw.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzaWtscHh5ZWN0YmVreHZham53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2OTI1MjEsImV4cCI6MjA3NzI2ODUyMX0.mtQnqUrTmhmN1DQxOAUnGpizhYZobStHDH0cz_XfKGU';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey );
+        
         const form = document.getElementById('doctor-form');
         const nombreInput = document.getElementById('nombre');
         const rneInput = document.getElementById('rne');
@@ -76,6 +98,14 @@
         const firmaPreview = document.getElementById('firma-preview');
         const statusMessage = document.getElementById('status-message');
         const submitButton = document.getElementById('submit-button');
+        
+        // --- ¡NUEVOS ELEMENTOS DE EDICIÓN! ---
+        const editButton = document.getElementById('edit-button');
+        const editSection = document.getElementById('edit-section');
+        const doctorSelect = document.getElementById('doctor-select');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        let allDoctores = [];
+        let currentEditingDoctorId = null;
 
         // --- Lógica de Previsualización (sin cambios) ---
         fotoInput.addEventListener('change', (e) => {
@@ -87,7 +117,68 @@
             if (file) { firmaPreview.src = URL.createObjectURL(file); firmaPreview.style.display = 'block'; }
         });
 
-        // --- Lógica del Formulario (¡SIMPLIFICADA!) ---
+        // --- ¡NUEVA LÓGICA PARA EL MODO EDICIÓN! ---
+        editButton.addEventListener('click', async () => {
+            editSection.style.display = 'block';
+            cancelEditBtn.style.display = 'block';
+            submitButton.textContent = 'Actualizar Doctor';
+            doctorSelect.innerHTML = '<option>Cargando doctores...</option>';
+
+            try {
+                const { data, error } = await supabase.from('doctores').select('id, nombre, rne, especialidad, foto, firma').order('nombre', { ascending: true });
+                if (error) throw error;
+                allDoctores = data;
+                doctorSelect.innerHTML = '<option value="">-- Selecciona un Doctor --</option>';
+                allDoctores.forEach(doc => {
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = doc.nombre;
+                    doctorSelect.appendChild(option);
+                });
+            } catch (error) {
+                statusMessage.textContent = `Error al cargar doctores: ${error.message}`;
+                statusMessage.className = 'error';
+            }
+        });
+
+        doctorSelect.addEventListener('change', () => {
+            const selectedId = parseInt(doctorSelect.value);
+            if (!selectedId) {
+                resetForm();
+                return;
+            }
+            const selectedDoctor = allDoctores.find(doc => doc.id === selectedId);
+            if (selectedDoctor) {
+                currentEditingDoctorId = selectedDoctor.id;
+                nombreInput.value = selectedDoctor.nombre || '';
+                rneInput.value = selectedDoctor.rne || '';
+                especialidadInput.value = selectedDoctor.especialidad || '';
+                
+                fotoPreview.style.display = selectedDoctor.foto ? 'block' : 'none';
+                fotoPreview.src = selectedDoctor.foto || '';
+                
+                firmaPreview.style.display = selectedDoctor.firma ? 'block' : 'none';
+                firmaPreview.src = selectedDoctor.firma || '';
+            }
+        });
+
+        cancelEditBtn.addEventListener('click', () => {
+            resetForm();
+            editSection.style.display = 'none';
+            cancelEditBtn.style.display = 'none';
+        });
+
+        function resetForm() {
+            form.reset();
+            fotoPreview.style.display = 'none';
+            firmaPreview.style.display = 'none';
+            statusMessage.textContent = '';
+            currentEditingDoctorId = null;
+            submitButton.textContent = 'Guardar Doctor';
+            doctorSelect.value = '';
+        }
+
+        // --- LÓGICA DEL FORMULARIO (¡AHORA INTELIGENTE!) ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             submitButton.disabled = true;
@@ -108,53 +199,49 @@
             }
 
             try {
-                let fotoUrl = null;
-                let firmaUrl = null;
+                let fotoUrl = currentEditingDoctorId ? allDoctores.find(d => d.id === currentEditingDoctorId).foto : null;
+                let firmaUrl = currentEditingDoctorId ? allDoctores.find(d => d.id === currentEditingDoctorId).firma : null;
 
-                // 1. Subir la foto si existe
                 if (fotoFile) {
-                    statusMessage.textContent = 'Subiendo foto...';
+                    statusMessage.textContent = 'Subiendo nueva foto...';
                     const fotoPath = `${Date.now()}_${fotoFile.name}`;
-                    const { error: fotoError } = await supabase.storage.from('foto_doctores').upload(fotoPath, fotoFile);
-                    if (fotoError) throw new Error(`Error al subir foto: ${fotoError.message}`);
-                    const { data: publicFotoUrl } = supabase.storage.from('foto_doctores').getPublicUrl(fotoPath);
-                    fotoUrl = publicFotoUrl.publicUrl;
+                    const { error } = await supabase.storage.from('foto_doctores').upload(fotoPath, fotoFile);
+                    if (error) throw new Error(`Error al subir foto: ${error.message}`);
+                    fotoUrl = supabase.storage.from('foto_doctores').getPublicUrl(fotoPath).data.publicUrl;
                 }
 
-                // 2. Subir la firma si existe
                 if (firmaFile) {
-                    statusMessage.textContent = 'Subiendo firma...';
+                    statusMessage.textContent = 'Subiendo nueva firma...';
                     const firmaPath = `${Date.now()}_${firmaFile.name}`;
-                    const { error: firmaError } = await supabase.storage.from('firma_doctores').upload(firmaPath, firmaFile);
-                    if (firmaError) throw new Error(`Error al subir firma: ${firmaError.message}`);
-                    const { data: publicFirmaUrl } = supabase.storage.from('firma_doctores').getPublicUrl(firmaPath);
-                    firmaUrl = publicFirmaUrl.publicUrl;
+                    const { error } = await supabase.storage.from('firma_doctores').upload(firmaPath, firmaFile);
+                    if (error) throw new Error(`Error al subir firma: ${error.message}`);
+                    firmaUrl = supabase.storage.from('firma_doctores').getPublicUrl(firmaPath).data.publicUrl;
                 }
 
-                // 3. Guardar todos los datos en la tabla 'doctores'
-                statusMessage.textContent = 'Guardando datos del doctor...';
-                const { error: insertError } = await supabase.from('doctores').insert({
-                    nombre: nombre,
-                    rne: rne,
-                    especialidad: especialidad,
-                    foto: fotoUrl,
-                    firma: firmaUrl
-                });
+                const doctorData = { nombre, rne, especialidad, foto: fotoUrl, firma: firmaUrl };
 
-                // Si hay un error, la base de datos nos dirá si el RNE está duplicado.
-                if (insertError) {
-                    if (insertError.message.includes('duplicate key value violates unique constraint "doctores_rne_key"')) {
-                        throw new Error(`El RNE ${rne} ya está registrado. Por favor, use otro.`);
+                if (currentEditingDoctorId) {
+                    // --- MODO ACTUALIZAR ---
+                    statusMessage.textContent = 'Actualizando datos del doctor...';
+                    const { error } = await supabase.from('doctores').update(doctorData).eq('id', currentEditingDoctorId);
+                    if (error) throw new Error(`Error al actualizar: ${error.message}`);
+                    statusMessage.textContent = '¡Doctor actualizado con éxito!';
+                } else {
+                    // --- MODO CREAR ---
+                    statusMessage.textContent = 'Guardando nuevo doctor...';
+                    const { error } = await supabase.from('doctores').insert(doctorData);
+                    if (error) {
+                        if (error.message.includes('duplicate key value violates unique constraint "doctores_rne_key"')) {
+                            throw new Error(`El RNE ${rne} ya está registrado.`);
+                        }
+                        throw new Error(`Error al guardar: ${error.message}`);
                     }
-                    throw new Error(`Error al guardar en base de datos: ${insertError.message}`);
+                    statusMessage.textContent = '¡Doctor registrado con éxito!';
                 }
 
-                // 4. Éxito
-                statusMessage.textContent = '¡Doctor registrado con éxito!';
                 statusMessage.className = 'success';
-                form.reset();
-                fotoPreview.style.display = 'none';
-                firmaPreview.style.display = 'none';
+                resetForm();
+                editSection.style.display = 'none';
 
             } catch (error) {
                 console.error('Error en el proceso:', error);
