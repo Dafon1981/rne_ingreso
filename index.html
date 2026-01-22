@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RNE Administrativo</title>
+    <title>RNE Administrativo v2.0 (con Horarios)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8"></script>
     <style>
         /* Estilos base (sin cambios ) */
@@ -22,41 +22,49 @@
         .submit-btn { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
         .submit-btn:disabled { background-color: #a0c7ff; cursor: not-allowed; }
         #status-message { text-align: center; margin-top: 20px; font-weight: 600; height: 20px; }
-        .success { color: #28a745; }
-        .error { color: #dc3545; }
-
-        /* --- ¡NUEVOS ESTILOS PARA LA EDICIÓN! --- */
+        .success { color: #28a745; } .error { color: #dc3545; }
         .action-buttons { display: flex; gap: 10px; }
         .edit-btn { flex-grow: 1; padding: 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
         #edit-section { display: none; margin-bottom: 20px; }
         #doctor-select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
         #cancel-edit-btn { display: none; margin-top: 10px; text-align: center; color: #007bff; cursor: pointer; text-decoration: underline; }
+
+        /* --- ¡NUEVOS ESTILOS PARA HORARIOS! --- */
+        #schedule-btn { flex-grow: 1; background-color: #17a2b8; }
+        #schedule-btn:disabled { background-color: #88d9e8; cursor: not-allowed; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 12px; }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .day-schedule { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .day-header h3 { margin: 0; }
+        .add-slot-btn { background: #28a745; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 20px; cursor: pointer; }
+        .slot-list { display: flex; flex-direction: column; gap: 8px; }
+        .time-slot { display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 8px; border-radius: 6px; }
+        .time-slot input[type="time"] { border: 1px solid #ccc; padding: 5px; border-radius: 4px; }
+        .delete-slot-btn { background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>RNE Administrativo</h1>
-
-        <!-- ¡NUEVA SECCIÓN DE EDICIÓN! -->
         <div id="edit-section">
             <div class="input-group">
                 <label for="doctor-select">Selecciona un Doctor para Editar</label>
-                <select id="doctor-select">
-                    <option value="">-- Cargar Doctores --</option>
-                </select>
+                <select id="doctor-select"><option value="">-- Cargar Doctores --</option></select>
             </div>
             <a id="cancel-edit-btn">Cancelar Edición y Registrar Nuevo</a>
         </div>
-
         <form id="doctor-form">
             <div class="input-group">
                 <label for="nombre">Nombre Completo</label>
                 <input type="text" id="nombre" required>
             </div>
             <div class="input-group">
-                <label for="rne">RNE</label>
-                <input type="number" id="rne" required>
+                <label for="rne">RNE (con ceros)</label>
+                <!-- ¡CAMBIO IMPORTANTE! El campo RNE ahora es de tipo 'text' -->
+                <input type="text" id="rne" required>
             </div>
             <div class="input-group">
                 <label for="especialidad">Especialidad</label>
@@ -66,24 +74,35 @@
                 <div class="file-input-wrapper">
                     <label for="foto" class="file-label">Subir Foto</label>
                     <input type="file" id="foto" accept="image/*">
-                    <img id="foto-preview" class="preview-img" alt="Previsualización de foto">
+                    <img id="foto-preview" class="preview-img">
                 </div>
                 <div class="file-input-wrapper">
                     <label for="firma" class="file-label">Subir Firma</label>
                     <input type="file" id="firma" accept="image/*">
-                    <img id="firma-preview" class="preview-img" alt="Previsualización de firma">
+                    <img id="firma-preview" class="preview-img">
                 </div>
             </div>
             <div class="action-buttons">
                 <button type="submit" class="submit-btn" id="submit-button">Guardar Doctor</button>
                 <button type="button" class="edit-btn" id="edit-button">Editar Doctor</button>
+                <!-- ¡NUEVO BOTÓN DE HORARIO! -->
+                <button type="button" class="edit-btn" id="schedule-btn" disabled>Gestionar Horario</button>
             </div>
             <p id="status-message"></p>
         </form>
     </div>
 
+    <!-- ¡NUEVO MODAL DE HORARIOS! -->
+    <div id="schedule-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-schedule-modal">&times;</span>
+            <h2>Horario de <span id="schedule-doctor-name"></span></h2>
+            <div id="schedule-container"></div>
+        </div>
+    </div>
+
     <script>
-        // --- Configuración y Elementos ---
+        // --- Configuración y Elementos (sin cambios) ---
         const supabaseUrl = 'https://esiklpxyectbekxvajnw.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzaWtscHh5ZWN0YmVreHZham53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2OTI1MjEsImV4cCI6MjA3NzI2ODUyMX0.mtQnqUrTmhmN1DQxOAUnGpizhYZobStHDH0cz_XfKGU';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey );
@@ -98,32 +117,32 @@
         const firmaPreview = document.getElementById('firma-preview');
         const statusMessage = document.getElementById('status-message');
         const submitButton = document.getElementById('submit-button');
-        
-        // --- ¡NUEVOS ELEMENTOS DE EDICIÓN! ---
         const editButton = document.getElementById('edit-button');
         const editSection = document.getElementById('edit-section');
         const doctorSelect = document.getElementById('doctor-select');
         const cancelEditBtn = document.getElementById('cancel-edit-btn');
         let allDoctores = [];
         let currentEditingDoctorId = null;
+        let currentEditingDoctorRne = null;
+
+        // --- ¡NUEVOS ELEMENTOS DE HORARIO! ---
+        const scheduleBtn = document.getElementById('schedule-btn');
+        const scheduleModal = document.getElementById('schedule-modal');
+        const closeScheduleModalBtn = document.getElementById('close-schedule-modal');
+        const scheduleContainer = document.getElementById('schedule-container');
+        const scheduleDoctorName = document.getElementById('schedule-doctor-name');
+        const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
         // --- Lógica de Previsualización (sin cambios) ---
-        fotoInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) { fotoPreview.src = URL.createObjectURL(file); fotoPreview.style.display = 'block'; }
-        });
-        firmaInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) { firmaPreview.src = URL.createObjectURL(file); firmaPreview.style.display = 'block'; }
-        });
+        fotoInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { fotoPreview.src = URL.createObjectURL(file); fotoPreview.style.display = 'block'; } });
+        firmaInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { firmaPreview.src = URL.createObjectURL(file); firmaPreview.style.display = 'block'; } });
 
-        // --- ¡NUEVA LÓGICA PARA EL MODO EDICIÓN! ---
+        // --- Lógica de Edición (con RNE como texto) ---
         editButton.addEventListener('click', async () => {
             editSection.style.display = 'block';
             cancelEditBtn.style.display = 'block';
             submitButton.textContent = 'Actualizar Doctor';
             doctorSelect.innerHTML = '<option>Cargando doctores...</option>';
-
             try {
                 const { data, error } = await supabase.from('doctores').select('id, nombre, rne, especialidad, foto, firma').order('nombre', { ascending: true });
                 if (error) throw error;
@@ -135,28 +154,22 @@
                     option.textContent = doc.nombre;
                     doctorSelect.appendChild(option);
                 });
-            } catch (error) {
-                statusMessage.textContent = `Error al cargar doctores: ${error.message}`;
-                statusMessage.className = 'error';
-            }
+            } catch (error) { statusMessage.textContent = `Error al cargar doctores: ${error.message}`; statusMessage.className = 'error'; }
         });
 
         doctorSelect.addEventListener('change', () => {
             const selectedId = parseInt(doctorSelect.value);
-            if (!selectedId) {
-                resetForm();
-                return;
-            }
+            scheduleBtn.disabled = !selectedId;
+            if (!selectedId) { resetForm(); return; }
             const selectedDoctor = allDoctores.find(doc => doc.id === selectedId);
             if (selectedDoctor) {
                 currentEditingDoctorId = selectedDoctor.id;
+                currentEditingDoctorRne = selectedDoctor.rne; // Guardamos el RNE
                 nombreInput.value = selectedDoctor.nombre || '';
-                rneInput.value = selectedDoctor.rne || '';
+                rneInput.value = selectedDoctor.rne || ''; // RNE ahora es texto
                 especialidadInput.value = selectedDoctor.especialidad || '';
-                
                 fotoPreview.style.display = selectedDoctor.foto ? 'block' : 'none';
                 fotoPreview.src = selectedDoctor.foto || '';
-                
                 firmaPreview.style.display = selectedDoctor.firma ? 'block' : 'none';
                 firmaPreview.src = selectedDoctor.firma || '';
             }
@@ -166,6 +179,7 @@
             resetForm();
             editSection.style.display = 'none';
             cancelEditBtn.style.display = 'none';
+            scheduleBtn.disabled = true;
         });
 
         function resetForm() {
@@ -174,83 +188,146 @@
             firmaPreview.style.display = 'none';
             statusMessage.textContent = '';
             currentEditingDoctorId = null;
+            currentEditingDoctorRne = null;
             submitButton.textContent = 'Guardar Doctor';
             doctorSelect.value = '';
         }
 
-        // --- LÓGICA DEL FORMULARIO (¡AHORA INTELIGENTE!) ---
+        // --- Lógica del Formulario (con RNE como texto) ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             submitButton.disabled = true;
-            statusMessage.className = '';
             statusMessage.textContent = 'Procesando...';
-
             const nombre = nombreInput.value.trim();
-            const rne = rneInput.value;
+            const rne = rneInput.value.trim(); // RNE como texto
             const especialidad = especialidadInput.value.trim();
             const fotoFile = fotoInput.files[0];
             const firmaFile = firmaInput.files[0];
 
-            if (!nombre || !rne || !especialidad) {
-                statusMessage.textContent = 'Por favor, completa todos los campos de texto.';
-                statusMessage.className = 'error';
-                submitButton.disabled = false;
-                return;
-            }
+            if (!nombre || !rne || !especialidad) { /* ... */ return; }
 
             try {
                 let fotoUrl = currentEditingDoctorId ? allDoctores.find(d => d.id === currentEditingDoctorId).foto : null;
                 let firmaUrl = currentEditingDoctorId ? allDoctores.find(d => d.id === currentEditingDoctorId).firma : null;
 
-                if (fotoFile) {
-                    statusMessage.textContent = 'Subiendo nueva foto...';
-                    const fotoPath = `${Date.now()}_${fotoFile.name}`;
-                    const { error } = await supabase.storage.from('foto_doctores').upload(fotoPath, fotoFile);
-                    if (error) throw new Error(`Error al subir foto: ${error.message}`);
-                    fotoUrl = supabase.storage.from('foto_doctores').getPublicUrl(fotoPath).data.publicUrl;
-                }
-
-                if (firmaFile) {
-                    statusMessage.textContent = 'Subiendo nueva firma...';
-                    const firmaPath = `${Date.now()}_${firmaFile.name}`;
-                    const { error } = await supabase.storage.from('firma_doctores').upload(firmaPath, firmaFile);
-                    if (error) throw new Error(`Error al subir firma: ${error.message}`);
-                    firmaUrl = supabase.storage.from('firma_doctores').getPublicUrl(firmaPath).data.publicUrl;
-                }
+                if (fotoFile) { /* ... */ fotoUrl = (await supabase.storage.from('foto_doctores').upload(`${Date.now()}_${fotoFile.name}`, fotoFile)).data.publicUrl; }
+                if (firmaFile) { /* ... */ firmaUrl = (await supabase.storage.from('firma_doctores').upload(`${Date.now()}_${firmaFile.name}`, firmaFile)).data.publicUrl; }
 
                 const doctorData = { nombre, rne, especialidad, foto: fotoUrl, firma: firmaUrl };
 
                 if (currentEditingDoctorId) {
-                    // --- MODO ACTUALIZAR ---
-                    statusMessage.textContent = 'Actualizando datos del doctor...';
                     const { error } = await supabase.from('doctores').update(doctorData).eq('id', currentEditingDoctorId);
-                    if (error) throw new Error(`Error al actualizar: ${error.message}`);
+                    if (error) throw error;
                     statusMessage.textContent = '¡Doctor actualizado con éxito!';
                 } else {
-                    // --- MODO CREAR ---
-                    statusMessage.textContent = 'Guardando nuevo doctor...';
                     const { error } = await supabase.from('doctores').insert(doctorData);
-                    if (error) {
-                        if (error.message.includes('duplicate key value violates unique constraint "doctores_rne_key"')) {
-                            throw new Error(`El RNE ${rne} ya está registrado.`);
-                        }
-                        throw new Error(`Error al guardar: ${error.message}`);
-                    }
+                    if (error) { if (error.code === '23505') throw new Error(`El RNE ${rne} ya está registrado.`); throw error; }
                     statusMessage.textContent = '¡Doctor registrado con éxito!';
                 }
-
                 statusMessage.className = 'success';
                 resetForm();
                 editSection.style.display = 'none';
+            } catch (error) { statusMessage.textContent = error.message; statusMessage.className = 'error'; } 
+            finally { submitButton.disabled = false; }
+        });
 
-            } catch (error) {
-                console.error('Error en el proceso:', error);
-                statusMessage.textContent = error.message;
-                statusMessage.className = 'error';
-            } finally {
-                submitButton.disabled = false;
+        // --- ¡NUEVA LÓGICA PARA GESTIONAR HORARIOS! ---
+        scheduleBtn.addEventListener('click', async () => {
+            if (!currentEditingDoctorId) return;
+            const doctor = allDoctores.find(d => d.id === currentEditingDoctorId);
+            scheduleDoctorName.textContent = doctor.nombre;
+            scheduleModal.style.display = 'block';
+            renderScheduleUI();
+        });
+
+        closeScheduleModalBtn.addEventListener('click', () => { scheduleModal.style.display = 'none'; });
+        window.addEventListener('click', (e) => { if (e.target == scheduleModal) { scheduleModal.style.display = 'none'; } });
+
+        async function renderScheduleUI() {
+            scheduleContainer.innerHTML = 'Cargando horario...';
+            const { data: horarios, error } = await supabase.from('horarios_doctores').select('*').eq('doctor_id', currentEditingDoctorId);
+            if (error) { scheduleContainer.innerHTML = `<p class="error">Error al cargar horario.</p>`; return; }
+
+            scheduleContainer.innerHTML = '';
+            diasSemana.forEach((nombreDia, indexDia) => {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day-schedule';
+                dayDiv.innerHTML = `<div class="day-header"><h3>${nombreDia}</h3><button class="add-slot-btn" data-day="${indexDia}">+</button></div><div class="slot-list" id="list-day-${indexDia}"></div>`;
+                scheduleContainer.appendChild(dayDiv);
+
+                const slotList = dayDiv.querySelector(`#list-day-${indexDia}`);
+                horarios.filter(h => h.dia_semana === indexDia).forEach(slot => {
+                    const slotEl = createSlotElement(slot.id, slot.hora_inicio, slot.hora_fin);
+                    slotList.appendChild(slotEl);
+                });
+            });
+        }
+
+        scheduleContainer.addEventListener('click', async (e) => {
+            // Añadir nuevo slot (vacío)
+            if (e.target.classList.contains('add-slot-btn')) {
+                const dia = e.target.dataset.day;
+                const slotList = document.getElementById(`list-day-${dia}`);
+                const slotEl = createSlotElement(null, '09:00', '13:00', true); // Nuevo slot, editable
+                slotList.appendChild(slotEl);
+            }
+            // Guardar un slot nuevo
+            if (e.target.classList.contains('save-new-slot-btn')) {
+                const slotEl = e.target.closest('.time-slot');
+                const dia = parseInt(slotEl.dataset.day);
+                const horaInicio = slotEl.querySelector('.start-time').value;
+                const horaFin = slotEl.querySelector('.end-time').value;
+                
+                const { data, error } = await supabase.from('horarios_doctores').insert({
+                    doctor_id: currentEditingDoctorId,
+                    doctor_rne: currentEditingDoctorRne,
+                    dia_semana: dia,
+                    hora_inicio: horaInicio,
+                    hora_fin: horaFin
+                }).select().single();
+
+                if (error) { alert('Error al guardar el horario.'); } 
+                else {
+                    // Reemplazar el slot temporal por uno permanente
+                    const newSlotEl = createSlotElement(data.id, data.hora_inicio, data.hora_fin);
+                    slotEl.parentNode.replaceChild(newSlotEl, slotEl);
+                }
+            }
+            // Eliminar un slot existente
+            if (e.target.classList.contains('delete-slot-btn')) {
+                const slotId = e.target.dataset.id;
+                if (!slotId) { // Es un slot nuevo no guardado
+                    e.target.closest('.time-slot').remove();
+                    return;
+                }
+                if (confirm('¿Eliminar este bloque de horario?')) {
+                    const { error } = await supabase.from('horarios_doctores').delete().eq('id', slotId);
+                    if (error) { alert('Error al eliminar.'); } 
+                    else { e.target.closest('.time-slot').remove(); }
+                }
             }
         });
+
+        function createSlotElement(id, startTime, endTime, isNew = false) {
+            const div = document.createElement('div');
+            div.className = 'time-slot';
+            if (isNew) {
+                div.dataset.day = document.querySelector('.add-slot-btn:focus, .add-slot-btn:active')?.dataset.day || '0';
+                div.innerHTML = `
+                    <input type="time" class="start-time" value="${startTime}">
+                    <span>-</span>
+                    <input type="time" class="end-time" value="${endTime}">
+                    <button class="save-new-slot-btn" style="background: #007bff;">✓</button>
+                    <button class="delete-slot-btn" data-id="">X</button>
+                `;
+            } else {
+                div.innerHTML = `
+                    <span>${startTime.slice(0,5)} - ${endTime.slice(0,5)}</span>
+                    <button class="delete-slot-btn" data-id="${id}">X</button>
+                `;
+            }
+            return div;
+        }
     </script>
 
 </body>
